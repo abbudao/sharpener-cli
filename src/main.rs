@@ -60,10 +60,10 @@ fn download_exercise(lang: String, name: String) -> Result<(), CliError> {
     );
     let exercise: Exercise = reqwest::get(&request_uri)?.json()?;
     let download_uri = exercise.compressed.replace("gs://", BUCKET_URI);
-    println!("{:?}", download_uri);
+    println!("Downloading exercise {}, for language {}...", name, lang);
     let mut tar_file = download_tar(&download_uri)?;
     tar_file.unpack("./")?;
-    println!("Success");
+    println!("Downloaded {}.", name);
     Ok(())
 }
 
