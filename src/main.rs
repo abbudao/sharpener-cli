@@ -1,8 +1,9 @@
+use flate2::read::GzDecoder;
 use serde::Deserialize;
 use structopt::StructOpt;
 use tar;
 
-static API_URI: &str = "http://localhost:5000/api";
+static API_URI: &str = "http://sharpener-cloud.appspot.com/api";
 static BUCKET_URI: &str = "https://storage.googleapis.com/";
 type CliError = Box<dyn std::error::Error>;
 #[derive(StructOpt, Debug)]
@@ -66,10 +67,11 @@ fn download_exercise(lang: String, name: String) -> Result<(), CliError> {
     Ok(())
 }
 
-type TarArchive = tar::Archive<reqwest::Response>;
+type TarArchive = tar::Archive<GzDecoder<reqwest::Response>>;
 
 fn download_tar(target: &str) -> Result<TarArchive, CliError> {
     let response = reqwest::get(target)?;
-    Ok(tar::Archive::new(response))
+    let decoded_response = GzDecoder::new(response);
+    Ok(tar::Archive::new(decoded_response))
 }
 
