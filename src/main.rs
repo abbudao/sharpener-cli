@@ -1,7 +1,11 @@
+use std::env;
 use flate2::read::GzDecoder;
 use serde::Deserialize;
 use structopt::StructOpt;
 use tar;
+use std::fs::File;
+use std::io::prelude::*;
+use std::path::PathBuf;
 
 static API_URI: &str = "http://sharpener-cloud.appspot.com/api";
 static BUCKET_URI: &str = "https://storage.googleapis.com/";
@@ -31,7 +35,9 @@ fn main() {
             language: l,
             name: n,
         } => download_exercise(l, n).unwrap(),
-        _ => println!("Oh noes"),
+        Cli::Config {
+            token: t,
+        } =>  store_token_in_home(t).unwrap(),
     }
 }
 
@@ -75,3 +81,11 @@ fn download_tar(target: &str) -> Result<TarArchive, CliError> {
     Ok(tar::Archive::new(decoded_response))
 }
 
+
+fn store_token_in_home(token: String) -> std::io::Result<()>{
+    let home = env::var("HOME").map(PathBuf::from).unwrap();
+    let config_path = home.join(".sharpener-config");
+    let mut file = File::create(config_path)?;
+    file.write_all(token.as_bytes())?;
+    Ok(())
+}
