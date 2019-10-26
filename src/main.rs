@@ -5,6 +5,7 @@ use structopt::StructOpt;
 use tar;
 use std::fs::File;
 use std::io::prelude::*;
+use std::path::PathBuf;
 
 static API_URI: &str = "http://sharpener-cloud.appspot.com/api";
 static BUCKET_URI: &str = "https://storage.googleapis.com/";
@@ -82,8 +83,8 @@ fn download_tar(target: &str) -> Result<TarArchive, CliError> {
 
 
 fn store_token_in_home(token: String) -> std::io::Result<()>{
-    let home = env::var("HOME").unwrap();
-    let config_path = format!("{}/.sharpener-config", home);
+    let home = env::var("HOME").map(PathBuf::from).unwrap();
+    let config_path = home.join(".sharpener-config");
     let mut file = File::create(config_path)?;
     file.write_all(token.as_bytes())?;
     Ok(())
