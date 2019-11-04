@@ -21,6 +21,8 @@ enum Cli {
         #[structopt(name = "name")]
         name: String,
     },
+    #[structopt(name = "submit", about = "Submit an exercise")]
+    Submit,
     #[structopt(name = "config", about = "Configure your user")]
     Config {
         #[structopt(name = "token")]
