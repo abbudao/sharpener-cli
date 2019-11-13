@@ -70,10 +70,25 @@ pub enum Error {
     #[snafu(display("Unable to run test command: {}", source))]
     TestCommand { source: std::io::Error },
 
+    #[snafu(display("Test output contains invalid characters: {}", source))]
+    InvalidTestOutput { source: std::string::FromUtf8Error },
+
     #[snafu(display(
         "Unable to forfeit current exercise: there are no available exercice to replace it."
     ))]
     InvalidForfeit,
+
+    #[snafu(display("Unable to open file required for submission at {}: {}", filename.display(), source))]
+    OpenSubmissionFile {
+        filename: PathBuf,
+        source: std::io::Error,
+    },
+
+    #[snafu(display("Unable to read file required for submission at {}: {}", filename.display(), source))]
+    ReadSubmissionFile {
+        filename: PathBuf,
+        source: std::io::Error,
+    },
 }
 
 pub type Result<T, E = Error> = std::result::Result<T, E>;

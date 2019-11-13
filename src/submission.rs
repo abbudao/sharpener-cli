@@ -2,9 +2,9 @@ use crate::error::*;
 use crate::language::Language;
 use crate::meta::Meta;
 use flate2::read::GzDecoder;
-use reqwest::{Client, StatusCode, Url};
+use reqwest::{multipart::Form, Client, StatusCode, Url};
 use serde::{de::Error as DeserializeError, Deserialize, Deserializer};
-use std::fs::OpenOptions;
+use std::fs::{File, OpenOptions};
 use std::io::{Seek, SeekFrom};
 use std::path::Path;
 use tar;
@@ -143,5 +143,76 @@ impl Submission {
             (true, Some(submission)) => Ok(submission),
             _ => Err(Error::InvalidForfeit),
         }
+    }
+
+    pub fn submit(client: Client, api: &Url) -> Result<()> {
+        let (meta, path) = Meta::get()?;
+        let token = meta.submission_token.context(MissingMeta)?;
+
+        println!("Running tests");
+        let output = meta.language.test_command().output().context(TestCommand)?;
+
+        let test_output = String::from_utf8(output.stdout).context(InvalidTestOutput)?;
+
+        let test_coverage = meta.language.parse_test_coverage(&test_output);
+        let parent = path.parent().unwrap();
+        let test_file_path = parent.join(meta.language.test_file_path());
+        let test_file_checksum = checksum_file(&test_file_path)?;
+
+        let solution_file_path = parent.join(meta.language.solution_file_path());
+
+        let form = Form::new()
+            .text("test_output", test_output)
+            .text("test_coverage", test_coverage)
+            .text("test_checksum", test_file_checksum)
+            .file("solution", &solution_file_path)
+            .context(OpenSubmissionFile {
+                filename: solution_file_path,
+            })?;
+
+        println!("Submitting results");
+        let suffix = format!("submissions/{}", token);
+        let url = api.join(&suffix).unwrap();
+        let response = client
+            .post(url)
+            .multipart(form)
+            .send()
+            .context(ServerRequest)?;
+
+        ensure!(
+            response.status() == StatusCode::OK,
+            InvalidAPIResponse {
+                expected: StatusCode::OK,
+                received: response.status()
+            }
+        );
+
+        Ok(())
+    }
+}
+
+fn checksum_file(path: &Path) -> Result<String> {
+    use md5::Context;
+    use std::io::{BufRead, BufReader};
+
+    let file = File::open(path).with_context(|| OpenSubmissionFile {
+        filename: path.to_path_buf(),
+    })?;
+    let mut buffed_file = BufReader::new(file);
+
+    let mut context = Context::new();
+
+    loop {
+        let buffer = buffed_file.fill_buf().with_context(|| ReadSubmissionFile {
+            filename: path.to_path_buf(),
+        })?;
+
+        if buffer.is_empty() {
+            return Ok(format!("{:x}", context.compute()));
+        }
+
+        context.consume(&buffer);
+        let consumed = buffer.len();
+        buffed_file.consume(consumed);
     }
 }

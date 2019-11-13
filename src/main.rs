@@ -31,6 +31,8 @@ enum Cli {
     List,
     #[structopt(about = "Show a hint for the current exercise")]
     Hint,
+    #[structopt(about = "Submit current exercise solution")]
+    Submit,
     #[structopt(
         about = "Get the solution to the current exercise, and a new exercise of equivalent difficulty"
     )]
@@ -116,6 +118,9 @@ fn run_cli() -> Result<()> {
                 "Exercise successfully forteited. To download the replacement exercise, run the following command:\n\n\tsharpener download {}\n", 
                 submission.submission_token
             );
+        }
+        Cli::Submit => {
+            Submission::submit(client, &url)?;
         }
         Cli::Config { .. } => unreachable!(),
     }
